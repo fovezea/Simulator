@@ -3,7 +3,7 @@
 
   Part of grblHAL
 
-  Copyright (c) 2020-2024 Terje Io
+  Copyright (c) 2020-2026 Terje Io
 
   grblHAL is free software: you can redistribute it and/or modify
   it under the terms of the GNU General Public License as published by
@@ -30,6 +30,11 @@
 #include "grbl/hal.h"
 
 spindle_id_t spindle_id;
+
+status_code_t mc_rigid_tapping (plan_line_data_t *pl_data, coord_data_t *target, coord_data_t *position, float pitch, float rpm_multiplier)
+{
+    return Status_GcodeUnsupportedCommand; // TBC
+}
 
 /* don't delay at all in validator */
 static void driver_delay_ms (uint32_t ms, void (*callback)(void))
@@ -154,12 +159,12 @@ uint16_t serial_get_rx_buffer_available()
 bool driver_init ()
 {
     hal.info = "Validator";
-    hal.driver_version = "240330";
+    hal.driver_version = "260817";
     hal.driver_setup = driver_setup;
     hal.rx_buffer_size = RX_BUFFER_SIZE;
     hal.f_step_timer = F_CPU;
     hal.delay_ms = driver_delay_ms;
-    hal.settings_changed = settings_changed;
+    grbl.on_settings_changed = settings_changed;
 
     hal.stepper.wake_up = stepperWakeUp;
     hal.stepper.go_idle = stepperGoIdle;

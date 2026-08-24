@@ -72,6 +72,11 @@ static axes_signals_t motors_0 = {AXES_BITMASK}, motors_1 = {AXES_BITMASK};
 void Limits1_IRQHandler (void);
 #endif
 
+status_code_t mc_rigid_tapping (plan_line_data_t *pl_data, coord_data_t *target, coord_data_t *position, float pitch, float rpm_multiplier)
+{
+    return Status_GcodeUnsupportedCommand; // TBC
+}
+
 static void driver_delay_ms (uint32_t ms, void (*callback)(void))
 {
     if((delay.ms = ms) > 0) {
@@ -418,8 +423,7 @@ bool driver_setup (settings_t *settings)
 
     mcu_gpio_in(&gpio[PROBE_PORT], PROBE_CONNECTED_BIT, PROBE_CONNECTED_BIT); // default to connected
 
-    settings_changed_flags_t changed_flags = {0};
-    hal.settings_changed(settings, changed_flags);
+    grbl.on_settings_changed(settings, (settings_changed_flags_t){0});
     hal.stepper.go_idle(true);
     spindle_ptrs_t* spindle;
 
@@ -468,12 +472,12 @@ bool driver_init ()
     systick_timer.enable = 1;
 
     hal.info = "Simulator";
-    hal.driver_version = "260324";
+    hal.driver_version = "260817";
     hal.driver_setup = driver_setup;
     hal.rx_buffer_size = RX_BUFFER_SIZE;
     hal.f_step_timer = F_CPU;
     hal.delay_ms = driver_delay_ms;
-    hal.settings_changed = settings_changed;
+    grbl.on_settings_changed = settings_changed;
 
     on_execute_realtime = grbl.on_execute_realtime;
     grbl.on_execute_realtime = sim_process_realtime;
