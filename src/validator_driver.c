@@ -111,6 +111,22 @@ static spindle_state_t spindleGetState (void)
     return state;
 }
 
+// Spindle registered so M3/M4/M5 are accepted like on a board with a
+// direction-capable spindle. The null spindle rejects M4 (no direction).
+static void validatorSpindleSetState (spindle_ptrs_t *spindle, spindle_state_t state, float rpm)
+{
+    UNUSED(spindle);
+    UNUSED(state);
+    UNUSED(rpm);
+}
+
+static spindle_state_t validatorSpindleGetState (spindle_ptrs_t *spindle)
+{
+    UNUSED(spindle);
+
+    return (spindle_state_t){0};
+}
+
 static void coolantSetState (coolant_state_t mode)
 {
 }
@@ -120,6 +136,12 @@ static coolant_state_t coolantGetState (void)
     coolant_state_t state = {0};
 
     return state;
+}
+
+// No tool changer: M6 blocks get a clean error instead of a NULL call.
+static atc_status_t atcGetState (void)
+{
+    return ATC_None;
 }
 
 static void bitsSetAtomic (volatile uint_fast16_t *ptr, uint_fast16_t bits)
@@ -184,6 +206,8 @@ bool driver_init ()
 
     hal.control.get_state = systemGetState;
 
+    hal.tool.atc_get_state = atcGetState;
+
     hal.nvs.type = NVS_None;
 
     hal.set_bits_atomic = bitsSetAtomic;
@@ -198,7 +222,14 @@ bool driver_init ()
     hal.driver_cap.limits_pull_up = On;
     hal.driver_cap.probe_pull_up = On;
 
-    spindle_id = spindle_add_null();
+    static const spindle_ptrs_t spindle = {
+        .type = SpindleType_Basic,
+        .cap.direction = On,
+        .set_state = validatorSpindleSetState,
+        .get_state = validatorSpindleGetState
+    };
+
+    spindle_id = spindle_register(&spindle, "Validator");
 
     // no need to move version check before init - compiler will fail any signature mismatch for existing entries
     return hal.version == 10;

@@ -110,6 +110,42 @@ void serial_write (const char *data)
     }
 }
 
+// Minimal io_stream_t handlers. The core calls these unguarded; hal is
+// zeroed at startup so any unwired handler would be a NULL pointer jump.
+// is_connected is the core's stream_connected() from stream.c.
+
+static uint16_t stream_rx_free (void)
+{
+    return UINT16_MAX; // reads come straight from the input file, no buffer limit
+}
+
+static uint16_t stream_rx_count (void)
+{
+    return 0;
+}
+
+static void stream_reset_read_buffer (void)
+{
+}
+
+static void stream_cancel_read_buffer (void)
+{
+}
+
+static bool stream_write_char (const uint8_t c)
+{
+    if (!args.silent)
+        fputc(c, args.output_file);
+
+    return true;
+}
+
+static void stream_write_n (const uint8_t *s, uint16_t len)
+{
+    if (!args.silent)
+        fwrite(s, 1, len, args.output_file);
+}
+
 int main(int argc, char *argv[])
 {
     int positional_args=0;
@@ -200,6 +236,9 @@ int main(int argc, char *argv[])
 
     memset(&sys, 0, sizeof(system_t));
     sys.cold_start = true;
+    // grbl_enter() sets this when driver init completes; the validator calls
+    // protocol_main_loop() directly and task_execute_on_startup() spins until it is set.
+    sys.driver_started = true;
 
     // TODO: read settings from EEPROM.dat if exists?
     nvs_buffer_alloc();
@@ -213,6 +252,13 @@ int main(int argc, char *argv[])
     hal.stream.read = serial_read;
     hal.stream.write = serial_write;
     hal.stream.write_all = serial_write;
+    hal.stream.write_char = stream_write_char;
+    hal.stream.write_n = stream_write_n;
+    hal.stream.is_connected = stream_connected;
+    hal.stream.get_rx_buffer_free = stream_rx_free;
+    hal.stream.get_rx_buffer_count = stream_rx_count;
+    hal.stream.reset_read_buffer = stream_reset_read_buffer;
+    hal.stream.cancel_read_buffer = stream_cancel_read_buffer;
 
 // state_set(STATE_CHECK_MODE);
         
